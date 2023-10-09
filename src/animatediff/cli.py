@@ -276,6 +276,28 @@ def generate(
             help="Show version",
         ),
     ] = None,
+    frame_dir: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--frames",
+            "-f",
+            path_type=Path,
+            file_okay=False,
+            help="Directory for output frames",
+            rich_help_panel="Output",
+        ),
+    ] = None,
+    out_file: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--out-file",
+            "-O",
+            path_type=Path,
+            file_okay=True,
+            help="Output file name",
+            rich_help_panel="Output",
+        ),
+    ] = None,
 ):
     """
     Do the thing. Make the animation happen. Waow.
@@ -309,7 +331,7 @@ def generate(
     # get a timestamp for the output directory
     time_str = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     # make the output directory
-    save_dir = out_dir.joinpath(f"{time_str}-{model_config.save_name}")
+    save_dir = out_dir #.joinpath(f"{time_str}-{model_config.save_name}")
     save_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Will save outputs to ./{path_from_cwd(save_dir)}")
 
@@ -437,7 +459,9 @@ def generate(
                 no_frames=no_frames,
                 ip_adapter_map=ip_adapter_map,
                 output_map = model_config.output,
-                is_single_prompt_mode=model_config.is_single_prompt_mode
+                is_single_prompt_mode=model_config.is_single_prompt_mode,
+                frame_dir=frame_dir,
+                out_file=out_file,
             )
             outputs.append(output)
             torch.cuda.empty_cache()
@@ -534,6 +558,17 @@ def tile_upscale(
             rich_help_panel="Advanced",
         ),
     ] = False,
+    upscaled_frames_dir: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--upscaled-frames-dir",
+            "-u",
+            path_type=Path,
+            file_okay=False,
+            help="Directory for output frames",
+            rich_help_panel="Output",
+        ),
+    ] = None,
     out_dir: Annotated[
         Path,
         typer.Option(
@@ -555,6 +590,17 @@ def tile_upscale(
             rich_help_panel="Output",
         ),
     ] = False,
+    out_file: Annotated[
+        Optional[Path],
+        typer.Option(
+            "--out-file",
+            "-O",
+            path_type=Path,
+            file_okay=True,
+            help="Output file name",
+            rich_help_panel="Output",
+        ),
+    ] = None,
 ):
     """Upscale frames using controlnet tile"""
     # be quiet, diffusers. we care not for your safety checker
@@ -582,7 +628,7 @@ def tile_upscale(
     # get a timestamp for the output directory
     time_str = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     # make the output directory
-    save_dir = out_dir.joinpath(f"{time_str}-{model_config.save_name}")
+    save_dir = out_dir #.joinpath(f"{time_str}-{model_config.save_name}")
     save_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Will save outputs to ./{path_from_cwd(save_dir)}")
 
@@ -694,6 +740,9 @@ def tile_upscale(
                 use_controlnet_ref=use_controlnet_ref,
                 use_controlnet_tile=use_controlnet_tile,
                 use_controlnet_line_anime=use_controlnet_line_anime,
+                out_file=out_file,
+                output_map=model_config.output,
+                upscaled_frames_dir=upscaled_frames_dir,
                 use_controlnet_ip2p=use_controlnet_ip2p,
             )
             torch.cuda.empty_cache()

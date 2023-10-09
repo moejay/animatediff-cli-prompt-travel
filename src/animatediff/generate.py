@@ -729,7 +729,7 @@ def ip_adapter_preprocess(
 
 
 def save_output(
-        pipeline_output,
+        pipeline_output: torch.Tensor | List[Image.Image],
         frame_dir:str,
         out_file:str,
         output_map : Dict[str,Any] = {},
@@ -763,7 +763,10 @@ def save_output(
     else:
 
         if save_frames:
-            save_frames(pipeline_output,frame_dir)
+            if isinstance(pipeline_output, torch.Tensor):
+                save_frames(pipeline_output,frame_dir)
+            elif isinstance(pipeline_output, list):
+                save_imgs(pipeline_output,frame_dir)
 
         from animatediff.rife.ffmpeg import (FfmpegEncoder, VideoCodec,
                                              codec_extn)
@@ -812,6 +815,8 @@ def run_inference(
     ip_adapter_map: Dict[str,Any] = None,
     output_map: Dict[str,Any] = None,
     is_single_prompt_mode: bool = False,
+    frame_dir:PathLike = None,
+    out_file:PathLike = None
 ):
     out_dir = Path(out_dir)  # ensure out_dir is a Path
 
@@ -849,8 +854,8 @@ def run_inference(
     prompt_tags = [re_clean_prompt.sub("", tag).strip().replace(" ", "-") for tag in prompt_map[list(prompt_map.keys())[0]].split(",")]
     prompt_str = "_".join((prompt_tags[:6]))[:50]
 
-    frame_dir = out_dir.joinpath(f"{idx:02d}-{seed}")
-    out_file = out_dir.joinpath(f"{idx:02d}_{seed}_{prompt_str}")
+    frame_dir = out_dir.joinpath(f"{idx:02d}-{seed}" if frame_dir is None else frame_dir)
+    out_file = out_dir.joinpath(f"{idx:02d}_{seed}_{prompt_str}" if out_file is None else out_file)
 
     output_format = "gif"
     output_fps = 8
@@ -913,6 +918,9 @@ def run_upscale(
     use_controlnet_tile: bool = False,
     use_controlnet_line_anime: bool = False,
     use_controlnet_ip2p: bool = False,
+    output_map: Dict[str,Any] = None,
+    upscaled_frames_dir:PathLike = None,
+    out_file:PathLike = None
 ):
     from animatediff.utils.lpw_stable_diffusion import lpw_encode_prompt
 
@@ -1106,17 +1114,12 @@ def run_upscale(
 
         out_images.append(out_image)
 
-    # Trim and clean up the prompt for filename use
-    prompt_tags = [re_clean_prompt.sub("", tag).strip().replace(" ", "-") for tag in prompt_map[list(prompt_map.keys())[0]].split(",")]
-    prompt_str = "_".join((prompt_tags[:6]))[:50]
-
-    # generate the output filename and save the video
-    out_file = out_dir.joinpath(f"{idx:02d}_{seed}_{prompt_str}.gif")
-
-    out_images[0].save(
-        fp=out_file, format="GIF", append_images=out_images[1:], save_all=True, duration=(1 / 8 * 1000), loop=0
+    save_output(
+        out_images,
+        upscaled_frames_dir,
+        out_file,
+        output_map=output_map,
+        no_frames=True,
     )
-
-    logger.info(f"Saved sample to {out_file}")
 
     return out_images
